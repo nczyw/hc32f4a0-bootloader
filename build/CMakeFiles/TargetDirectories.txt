@@ -1,6 +1,0 @@
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/CMakeFiles/hc32f4a0ritb_bootloader.elf.dir
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/CMakeFiles/edit_cache.dir
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/CMakeFiles/rebuild_cache.dir
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/drivers/hc32f4a0-drivers/CMakeFiles/hc32f4a0.dir
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/drivers/hc32f4a0-drivers/CMakeFiles/edit_cache.dir
-D:/Company/HC32F4A0Core/hc32f4a0-bootloader/build/drivers/hc32f4a0-drivers/CMakeFiles/rebuild_cache.dir
