@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/drivers/hc32f4a0-drivers/toolchain/toolchain.cmake" CACHE FILEPATH "Toolchain file")
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/drivers/toolchain/toolchain.cmake" CACHE FILEPATH "Toolchain file")
 project(hc32f4a0ritb_bootloader LANGUAGES C ASM)
 
 # 链接的类型设置为STATIC, 以便嵌入式ARM-GNU通过CMake的"编译器检查"
@@ -139,7 +139,7 @@ add_link_options(${MAP_FLAGS})
 set(MCU_TYPE "HC32F4A0xI" CACHE STRING "Set MCU Type")
 set(BOOTLOADER ON CACHE BOOL "Set to ON if bootloader is enabled")
 set(APP OFF CACHE BOOL "Set to ON if app is enabled")
-add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/drivers/hc32f4a0-drivers")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/drivers")
 add_link_options(-T ${LINKER_SCRIPT})
 
 # 源文件
