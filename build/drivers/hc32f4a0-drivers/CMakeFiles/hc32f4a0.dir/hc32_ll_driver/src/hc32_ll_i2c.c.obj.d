@@ -1,0 +1,24 @@
+drivers/hc32f4a0-drivers/CMakeFiles/hc32f4a0.dir/hc32_ll_driver/src/hc32_ll_i2c.c.obj: \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\hc32_ll_driver\src\hc32_ll_i2c.c \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\hc32_ll_driver\inc/hc32_ll_i2c.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\hc32_ll_driver\inc/hc32_ll_def.h \
+ d:\software\gcc-arm-none-eabi\lib\gcc\arm-none-eabi\10.3.1\include\stddef.h \
+ d:\software\gcc-arm-none-eabi\lib\gcc\arm-none-eabi\10.3.1\include\stdint.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\stdint.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\machine\_default_types.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\sys\features.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\_newlib_version.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\sys\_intsup.h \
+ d:\software\gcc-arm-none-eabi\arm-none-eabi\include\sys\_stdint.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Device\HDSC\hc32f4xx\Include/hc32f4xx.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Device\HDSC\hc32f4xx\Include/hc32f4a0.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Include/core_cm4.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Include/cmsis_version.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Include/cmsis_compiler.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Include/cmsis_gcc.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Include/mpu_armv7.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Device\HDSC\hc32f4xx\Include/system_hc32f4a0.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\hc32_ll_driver\inc/hc32_ll_def.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\cmsis\Device\HDSC\hc32f4xx\Include/hc32f4xx.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\mcu\inc/hc32f4xx_conf.h \
+ D:\Company\HC32F4A0Core\hc32f4a0-bootloader\drivers\hc32f4a0-drivers\hc32_ll_driver\inc/hc32_ll_utility.h

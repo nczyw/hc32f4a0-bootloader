@@ -1,0 +1,142 @@
+#include "uart.h"
+static void UART_DEBUG_TxComplete_IrqCallback(void);
+static void UART_DEBUG_RxError_IrqCallback(void);
+void uart_debug_init(void)
+{
+    stc_usart_uart_init_t stcUartInit;
+    stc_irq_signin_config_t stcIrqSigninConfig;
+
+    GPIO_SetFunc(UART_DEBUG_RX_PORT, UART_DEBUG_RX_PIN, UART_DEBUG_RX_FUN);
+    GPIO_SetFunc(UART_DEBUG_TX_PORT, UART_DEBUG_TX_PIN, UART_DEBUG_TX_FUN);
+
+    //打开功能时钟
+    UART_DEBUG_FCG_ENABLE();
+
+    /* Initialize UART. */
+    USART_UART_StructInit(&stcUartInit);
+    stcUartInit.u32ClockDiv = USART_CLK_DIV64;
+    stcUartInit.u32CKOutput = USART_CK_OUTPUT_ENABLE;
+    stcUartInit.u32Baudrate = UART_DEBUG_BAUDRATE;
+    stcUartInit.u32OverSampleBit = USART_OVER_SAMPLE_8BIT;
+    if (LL_OK != USART_UART_Init(UART_DEBUG_UNIT, &stcUartInit, NULL)) {
+        for (;;) {
+        }
+    }
+
+    /* Register TX complete IRQ handler. */
+    stcIrqSigninConfig.enIRQn = UART_DEBUG_TX_CPLT_IRQn;
+    stcIrqSigninConfig.enIntSrc = UART_DEBUG_TX_CPLT_INT_SRC;
+    stcIrqSigninConfig.pfnCallback = &UART_DEBUG_TxComplete_IrqCallback;
+    INTC_IrqSignIn(&stcIrqSigninConfig);
+    NVIC_ClearPendingIRQ(stcIrqSigninConfig.enIRQn);
+    NVIC_SetPriority(stcIrqSigninConfig.enIRQn, DDL_IRQ_PRIO_DEFAULT);
+    NVIC_EnableIRQ(stcIrqSigninConfig.enIRQn);
+
+    /* Register RX error IRQ handler. */
+    stcIrqSigninConfig.enIRQn = UART_DEBUG_RX_ERR_IRQn;
+    stcIrqSigninConfig.enIntSrc = UART_DEBUG_RX_ERR_INT_SRC;
+    stcIrqSigninConfig.pfnCallback = &UART_DEBUG_RxError_IrqCallback;
+    (void)INTC_IrqSignIn(&stcIrqSigninConfig);
+    NVIC_ClearPendingIRQ(stcIrqSigninConfig.enIRQn);
+    NVIC_SetPriority(stcIrqSigninConfig.enIRQn, DDL_IRQ_PRIO_DEFAULT);
+    NVIC_EnableIRQ(stcIrqSigninConfig.enIRQn);
+
+    /* Enable TX && RX && RX interrupt function */
+    USART_FuncCmd(UART_DEBUG_UNIT, (USART_RX | USART_INT_RX ), ENABLE);
+}
+
+int32_t UART_DEBUG_DMA_Config(void)
+{
+    int32_t i32Ret;
+    stc_dma_init_t stcDmaInit;
+    stc_dma_llp_init_t stcDmaLlpInit;
+    stc_irq_signin_config_t stcIrqSignConfig;
+    static stc_dma_llp_descriptor_t stcLlpDesc;
+
+    /* DMA&AOS FCG enable */
+    RX_DMA_FCG_ENABLE();
+    TX_DMA_FCG_ENABLE();
+    FCG_Fcg0PeriphClockCmd(FCG0_PERIPH_AOS, ENABLE);
+
+    /* USART_RX_DMA */
+    (void)DMA_StructInit(&stcDmaInit);
+    stcDmaInit.u32IntEn = DMA_INT_ENABLE;
+    stcDmaInit.u32BlockSize = 1UL;
+    stcDmaInit.u32TransCount = ARRAY_SZ(m_au8RxBuf);
+    stcDmaInit.u32DataWidth = DMA_DATAWIDTH_8BIT;
+    stcDmaInit.u32DestAddr = (uint32_t)m_au8RxBuf;
+    stcDmaInit.u32SrcAddr = (uint32_t)(&USART_UNIT->RDR);
+    stcDmaInit.u32SrcAddrInc = DMA_SRC_ADDR_FIX;
+    stcDmaInit.u32DestAddrInc = DMA_DEST_ADDR_INC;
+    i32Ret = DMA_Init(RX_DMA_UNIT, RX_DMA_CH, &stcDmaInit);
+    if (LL_OK == i32Ret) {
+        (void)DMA_LlpStructInit(&stcDmaLlpInit);
+        stcDmaLlpInit.u32State = DMA_LLP_ENABLE;
+        stcDmaLlpInit.u32Mode  = DMA_LLP_WAIT;
+        stcDmaLlpInit.u32Addr  = (uint32_t)&stcLlpDesc;
+        (void)DMA_LlpInit(RX_DMA_UNIT, RX_DMA_CH, &stcDmaLlpInit);
+
+        stcLlpDesc.SARx   = stcDmaInit.u32SrcAddr;
+        stcLlpDesc.DARx   = stcDmaInit.u32DestAddr;
+        stcLlpDesc.DTCTLx = (stcDmaInit.u32TransCount << DMA_DTCTL_CNT_POS) | (stcDmaInit.u32BlockSize << DMA_DTCTL_BLKSIZE_POS);;
+        stcLlpDesc.LLPx   = (uint32_t)&stcLlpDesc;
+        stcLlpDesc.CHCTLx = stcDmaInit.u32SrcAddrInc | stcDmaInit.u32DestAddrInc | stcDmaInit.u32DataWidth |  \
+                            stcDmaInit.u32IntEn      | stcDmaLlpInit.u32State    | stcDmaLlpInit.u32Mode;
+
+        DMA_ReconfigLlpCmd(RX_DMA_UNIT, RX_DMA_CH, ENABLE);
+        DMA_ReconfigCmd(RX_DMA_UNIT, ENABLE);
+        AOS_SetTriggerEventSrc(RX_DMA_RECONF_TRIG_SEL, RX_DMA_RECONF_TRIG_EVT_SRC);
+
+        stcIrqSignConfig.enIntSrc = RX_DMA_TC_INT_SRC;
+        stcIrqSignConfig.enIRQn  = RX_DMA_TC_IRQn;
+        stcIrqSignConfig.pfnCallback = &RX_DMA_TC_IrqCallback;
+        (void)INTC_IrqSignIn(&stcIrqSignConfig);
+        NVIC_ClearPendingIRQ(stcIrqSignConfig.enIRQn);
+        NVIC_SetPriority(stcIrqSignConfig.enIRQn, DDL_IRQ_PRIO_DEFAULT);
+        NVIC_EnableIRQ(stcIrqSignConfig.enIRQn);
+
+        AOS_SetTriggerEventSrc(RX_DMA_TRIG_SEL, RX_DMA_TRIG_EVT_SRC);
+
+        DMA_Cmd(RX_DMA_UNIT, ENABLE);
+        DMA_TransCompleteIntCmd(RX_DMA_UNIT, RX_DMA_TC_INT, ENABLE);
+        (void)DMA_ChCmd(RX_DMA_UNIT, RX_DMA_CH, ENABLE);
+    }
+
+    /* USART_TX_DMA */
+    (void)DMA_StructInit(&stcDmaInit);
+    stcDmaInit.u32IntEn = DMA_INT_ENABLE;
+    stcDmaInit.u32BlockSize = 1UL;
+    stcDmaInit.u32TransCount = ARRAY_SZ(m_au8RxBuf);
+    stcDmaInit.u32DataWidth = DMA_DATAWIDTH_8BIT;
+    stcDmaInit.u32DestAddr = (uint32_t)(&USART_UNIT->TDR);
+    stcDmaInit.u32SrcAddr = (uint32_t)m_au8RxBuf;
+    stcDmaInit.u32SrcAddrInc = DMA_SRC_ADDR_INC;
+    stcDmaInit.u32DestAddrInc = DMA_DEST_ADDR_FIX;
+    i32Ret = DMA_Init(TX_DMA_UNIT, TX_DMA_CH, &stcDmaInit);
+    if (LL_OK == i32Ret) {
+        stcIrqSignConfig.enIntSrc = TX_DMA_TC_INT_SRC;
+        stcIrqSignConfig.enIRQn  = TX_DMA_TC_IRQn;
+        stcIrqSignConfig.pfnCallback = &TX_DMA_TC_IrqCallback;
+        (void)INTC_IrqSignIn(&stcIrqSignConfig);
+        NVIC_ClearPendingIRQ(stcIrqSignConfig.enIRQn);
+        NVIC_SetPriority(stcIrqSignConfig.enIRQn, DDL_IRQ_PRIO_DEFAULT);
+        NVIC_EnableIRQ(stcIrqSignConfig.enIRQn);
+
+        AOS_SetTriggerEventSrc(TX_DMA_TRIG_SEL, TX_DMA_TRIG_EVT_SRC);
+
+        DMA_Cmd(TX_DMA_UNIT, ENABLE);
+        DMA_TransCompleteIntCmd(TX_DMA_UNIT, TX_DMA_TC_INT, ENABLE);
+    }
+
+    return i32Ret;
+}
+
+static void UART_DEBUG_TxComplete_IrqCallback(void)
+{
+    USART_FuncCmd(UART_DEBUG_UNIT, (USART_TX | USART_INT_TX_CPLT), DISABLE);
+}
+static void UART_DEBUG_RxError_IrqCallback(void)
+{
+    USART_ReadData(UART_DEBUG_UNIT);
+    USART_ClearStatus(UART_DEBUG_UNIT, (USART_FLAG_PARITY_ERR | USART_FLAG_FRAME_ERR | USART_FLAG_OVERRUN));
+}

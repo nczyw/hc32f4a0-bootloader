@@ -1,0 +1,53 @@
+#ifndef UART_H
+#define UART_H
+
+#include "mysys.h"
+
+/* DMA definition */    
+#define UART_DEBUG_RX_DMA_UNIT                      (CM_DMA1)
+#define UART_DEBUG_RX_DMA_CH                        (DMA_CH0)
+#define UART_DEBUG_RX_DMA_TRIG_SEL                  (AOS_DMA1_0)
+#define UART_DEBUG_RX_DMA_TRIG_EVT_SRC              (EVT_SRC_USART4_RI)
+#define UART_DEBUG_RX_DMA_RECONF_TRIG_SEL           (AOS_DMA_RC)
+#define UART_DEBUG_RX_DMA_RECONF_TRIG_EVT_SRC       (EVT_SRC_AOS_STRG)
+#define UART_DEBUG_RX_DMA_TC_INT                    (DMA_INT_TC_CH0)
+#define UART_DEBUG_RX_DMA_TC_FLAG                   (DMA_FLAG_TC_CH0)
+#define UART_DEBUG_RX_DMA_TC_IRQn                   (INT000_IRQn)
+#define UART_DEBUG_RX_DMA_TC_INT_SRC                (INT_SRC_DMA1_TC0)
+
+#define UART_DEBUG_TX_DMA_UNIT                      (CM_DMA1)
+#define UART_DEBUG_TX_DMA_CH                        (DMA_CH1)
+#define UART_DEBUG_TX_DMA_TRIG_SEL                  (AOS_DMA1_1)
+#define UART_DEBUG_TX_DMA_TRIG_EVT_SRC              (EVT_SRC_USART4_TI)
+#define UART_DEBUG_TX_DMA_TC_INT                    (DMA_INT_TC_CH1)
+#define UART_DEBUG_TX_DMA_TC_FLAG                   (DMA_FLAG_TC_CH1)
+#define UART_DEBUG_TX_DMA_TC_IRQn                   (INT001_IRQn)
+#define UART_DEBUG_TX_DMA_TC_INT_SRC                (INT_SRC_DMA1_TC1)
+
+#define UART_DEBUG_DMA_FCG_ENABLE()                 (FCG_Fcg0PeriphClockCmd(FCG0_PERIPH_DMA1, ENABLE))
+
+#define UART_DEBUG_RX_PORT                          (GPIO_PORT_B)
+#define UART_DEBUG_RX_PIN                           (GPIO_PIN_00)
+#define UART_DEBUG_RX_FUN                           (GPIO_FUNC_33)
+
+#define UART_DEBUG_TX_PORT                          (GPIO_PORT_B)
+#define UART_DEBUG_TX_PIN                           (GPIO_PIN_01)
+#define UART_DEBUG_TX_FUN                           (GPIO_FUNC_32)
+
+#define UART_DEBUG_UNIT                             (CM_USART4)
+#define UART_DEBUG_FCG_ENABLE()                     (FCG_Fcg3PeriphClockCmd(FCG3_PERIPH_USART4, ENABLE))
+
+/* USART baudrate definition */
+#define UART_DEBUG_BAUDRATE                         (115200UL)
+
+/* USART interrupt definition */
+#define UART_DEBUG_TX_CPLT_IRQn                     (INT002_IRQn)
+#define UART_DEBUG_TX_CPLT_INT_SRC                  (INT_SRC_USART4_TCI)
+
+#define UART_DEBUG_RX_ERR_IRQn                      (INT003_IRQn)
+#define UART_DEBUG_RX_ERR_INT_SRC                   (INT_SRC_USART4_EI)
+
+void uart_debug_init(void);
+int32_t UART_DEBUG_DMA_Config(void);
+
+#endif

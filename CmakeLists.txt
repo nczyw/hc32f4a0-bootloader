@@ -1,0 +1,178 @@
+cmake_minimum_required(VERSION 3.20)
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/drivers/hc32f4a0-drivers/toolchain/toolchain.cmake" CACHE FILEPATH "Toolchain file")
+project(hc32f4a0ritb_bootloader LANGUAGES C ASM)
+
+# 链接的类型设置为STATIC, 以便嵌入式ARM-GNU通过CMake的"编译器检查"
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+#Uncomment for hardware floating point
+add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
+add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
+add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
+
+#Uncomment for software floating point
+#add_compile_options(-mfloat-abi=soft)
+
+#编译选项定义
+#   对于 cortex-m0 / cortex-m0+ / cortex-m1
+#   +---------------------------------------------------+
+#   | -mthumb -mcpu=cortex-m0/cortex-m0+/cortex-m1 或 -mthumb -march=armv6-m |
+#   +---------------------------------------------------+
+
+#   对于 cortex-m3
+#   +---------------------------------------------------+
+#   | -mthumb -mcpu=cortex-m3 或 -mthumb -march=armv7-m |
+#   +---------------------------------------------------+
+
+#   对于 cortex-m4
+#   +---------------------------------------------------+
+#   | -mthumb -mcpu=cortex-m4 或 -mthumb -march=armv7-m|
+#   +---------------------------------------------------+
+
+#   对于 cortex-m7
+#   +---------------------------------------------------+
+#   | -mthumb -mcpu=cortex-m7 或 -mthumb -march=armv7-m |
+#   +---------------------------------------------------+
+
+# -mcpu=cortex-m3 告诉编译器为 ARM Cortex-M3 处理器生成代码
+# -mthumb 启用 Thumb 指令集，Thumb 指令集是一种 16 位指令集
+# -march=armv7-m 指定目标架构，ARMv7-M 是 Cortex-M3 处理器使用的架构
+set(MCU_FLAGS -mcpu=cortex-m4 -mthumb -mthumb-interwork)    #   编译选项定义修改处
+
+#-fdata-sections用于将每个符号创建为一个sections，其中每个sections名与data名保持一致。
+#-ffunction-sections用于将每个函数创建为一个sections，其中每个sections名与function名保持一致。
+#用于代码的分割和裁剪，会将每一个函数都拆分成.text(Code+RO-data)段、.data(RW-data)段、.bss(ZI-data)段，这部分和对象文件的链接有关。如果没有这两个参数，编译器就会按文件分段而不是按照函数分段。
+#加上这两个参数，配合链接器可以#去除代码中无用的部分，减少最终可执行文件的大小。
+#-fno-common用于未初始化的全局变量当成强符号，重复定义就会报错。
+#开启-fmessage-length=0会让编译器展示所有的消息而不会限制错误和警告输出的长度
+set(OPTIMIZE_COMPILE_FLAGS -ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
+# 针对所有编译器，开启编译警告 (包括C、C++编译器)，-Wall可开启所有警告；-Werror将所有警告视为error
+add_compile_options("-Wall" "-Werror")
+add_compile_options(${MCU_FLAGS})
+add_compile_options(${OPTIMIZE_COMPILE_FLAGS})
+
+# /*
+# 编译等级选项：优化等级
+# -O0：无任何优化，关闭所有优化选项
+# -O、-O1：1级优化,
+# -O2: 2级优化,
+# -Os: 2.5级优化,-Os启用所有通常不会增加代码大小的-O2优化。 它还执行旨在减少代码大小的进一步优化。
+# -O3: 最高级优化。
+# -Og：优化调试体验。 -Og启用不会干扰调试的优化。 它是标准编辑 - 编译 - 调试周期可以选择的优化级别，提供合理的优化级别，同时保持快速编译和良好的调试体验。
+# -Ofast：无视严格的标准合规性。 -Ofast启用所有-O3优化。 它还打开并非对所有符合标准的程序有效的优化。
+# */
+
+#设置代码调试等级
+set(CMAKE_BUILD_TYPE "Debug")
+#   +---------------+---------------+--------------+--------------+----------+
+#   |               |               | optimization | assert works | stripped |
+#   +---------------+---------------+--------------+--------------+----------|
+#   |               |     None      |              |              |          |
+#   |    -g         |     Debug     |     no       |     yes      |    no    |
+#   |-O3 -DNDEBUG   |    Release    |    full      |      no      |   yes    |
+#   |-O2 -g -DNDEBUG| RelWithDebInfo|    good      |      no      |    no    |
+#   |-Os -DNDEBUG   |   MinSizeRel  |    size      |      no      |   yes    |
+#   +---------------+---------------+--------------+--------------+----------+
+# Release 进行优化，提高速度 -排除调试信息
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    message(VERBOSE "Maximum optimization for speed")
+    add_compile_options(-Ofast)
+# RelWithDebInfo 进行优化，提高速度 -包含调试信息
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+    message(VERBOSE "Maximum optimization for speed, debug info included")
+    add_compile_options(-Ofast -g)
+# MinSizeRel 优化二进制大小 -排除调试信息
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "MinSizeRel")
+    message(VERBOSE "Maximum optimization for size")
+    add_compile_options(-Os)
+# Debug 禁用优化 -包含调试信息
+else ()
+    message(VERBOSE "Minimal optimization, debug info included")
+    add_compile_options(-Og -g)
+endif ()
+
+ENABLE_LANGUAGE(ASM) #为了让cmake识别启动文件
+
+
+#   这三个变量指代的内容是一致的，指的是工程编译产生的目录
+#   +------------------+--------------------+--------------------------+
+#   | CMAKE_BINARY_DIR | PROJECT_BINARY_DIR | <projectname>_BINARY_DIR |
+#   +------------------+--------------------+--------------------------+
+
+#   这三个变量指代的内容是一致的，指的是工程顶级目录
+#   +------------------+--------------------+--------------------------+
+#   | CMAKE_SOURCE_DIR | PROJECT_SOURCE_DIR | <projectname>_SOURCE_DIR |
+#   +------------------+--------------------+--------------------------+
+
+#添加汇编启动文件路径，startup文件是STM32CubeMX生成的(需要gcc版本，不要使用MDK版本)
+
+#set(SRC_STARTUP "${CMAKE_SOURCE_DIR}/startup_hc32f4a0.s")
+
+# -Wl,--gc-sections 链接使用的分段方式，需要配合C文件/汇编生成obj的时候同样选型分段方式，
+# 好处是链接的时候源文件中的未使用变量和未调用函数将不会被链接到elf文件中，最终可执行文件elf会很精简。
+# -no-warn-rwx-segments：消除 LOAD segment with RWX permissions 警告
+# -flto, 链接时优化，会减少程序体积，同时也会略微降低性能（当测试coremark时）
+# -specs=nano.specs选择链接精简C库newlib-nano，而非标准C库glibc或newlib。
+# -specs=nosys.specs禁止链接任何系统库(如glibc或newlib)。
+# -u_printf_float显式启用浮点数打印 -u_scanf_float显式启用浮点数输入
+#set(OPTIMIZE_LD_FLAGS -Wl,--gc-sections, -flto -specs=nano.specs -specs=nosys.specs -u_printf_float -u_scanf_float)
+set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=nano.specs" "-specs=nosys.specs" "-u_printf_float" "-u_scanf_float")
+
+#添加.ld链接脚本路径
+# -T$(LDSCRIPT)依赖的可执行文件链接脚本
+#set(LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/HC32F4A0xI.ld")
+
+
+
+#-cref则生成交叉引用表方便查找未定义的符号引用（比如编译时出现的undefined reference）
+#--print-memory-usage选项提供链接器文件中定义的每个内存区域使用的内存的详细信息
+# -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref 生成map文件
+set(MAP_FLAGS -Wl,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map,--cref)
+
+#链接选项配置
+add_link_options(${MCU_FLAGS})
+add_link_options(${OPTIMIZE_LD_FLAGS})
+add_link_options(${MAP_FLAGS})
+
+# 加载驱动模块
+set(MCU_TYPE "HC32F4A0xI" CACHE STRING "Set MCU Type")
+set(BOOTLOADER ON CACHE BOOL "Set to ON if bootloader is enabled")
+set(APP OFF CACHE BOOL "Set to ON if app is enabled")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/drivers/hc32f4a0-drivers")
+add_link_options(-T ${LINKER_SCRIPT})
+
+# 源文件
+file(GLOB SOURCES
+    "${CMAKE_CURRENT_LIST_DIR}/src/*.c"
+    "${CMAKE_CURRENT_LIST_DIR}/hardware/src/*.c"
+    "${CMAKE_CURRENT_LIST_DIR}/fatfs/src/*.c"
+)
+
+#根据源文件、汇编启动文件、链接脚本 生成 .elf可执行文件
+add_executable(${PROJECT_NAME}.elf  ${SOURCES}  ${LINKER_SCRIPT})
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE 
+    hc32f4a0
+)
+#添加头文件依赖
+target_include_directories(${PROJECT_NAME}.elf PRIVATE 
+    "${CMAKE_CURRENT_LIST_DIR}/inc"
+    "${CMAKE_CURRENT_LIST_DIR}/hardware/inc"
+    "${CMAKE_CURRENT_LIST_DIR}/fatfs/inc"
+)
+set(ELF_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.elf)
+set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
+set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
+
+# 显示编译的文件大小信息
+add_custom_command(TARGET "${PROJECT_NAME}.elf" POST_BUILD
+        COMMENT "Invoking: Cross ARM GNU Print Size"
+        COMMAND ${CMAKE_SIZE} ${PROJECT_NAME}.elf
+)
+
+# 创建 hex 和 bin 文件
+add_custom_command(TARGET "${PROJECT_NAME}.elf" POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
+        COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
+        COMMENT "Building ${HEX_FILE}
+Building ${BIN_FILE}")

@@ -1,0 +1,10 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+D:/Company/HC32F4A0Core/hc32f4a0-bootloader/drivers/hc32f4a0-drivers/cmsis/Device/HDSC/hc32f4xx/Source/GCC/startup_hc32f4a0.S
+
