@@ -115,15 +115,13 @@ ENABLE_LANGUAGE(ASM) #为了让cmake识别启动文件
 # -flto, 链接时优化，会减少程序体积，同时也会略微降低性能（当测试coremark时）
 # -specs=nano.specs选择链接精简C库newlib-nano，而非标准C库glibc或newlib。
 # -specs=nosys.specs禁止链接任何系统库(如glibc或newlib)。
+# -specs=libc.specs 启用标准 C 库（如 newlib）的支持，适用于需要使用标准库函数的项目。它提供了类似 malloc, free, printf 等功能。
+# -specs=rdimon.specs 启用标准 I/O 和调试支持，通常用于在裸机环境下进行调试，支持通过串口等接口输出调试信息。
+# -specs=nosys.specs 禁用系统调用和标准库支持，适用于完全裸机开发的项目。
+# -specs=libnosys.specs 与 nosys.specs 类似，但更侧重于不使用系统调用的裸机环境。在这种配置下，你可以自行实现所需的系统调用，或者完全不使用系统调用。
 # -u_printf_float显式启用浮点数打印 -u_scanf_float显式启用浮点数输入
 #set(OPTIMIZE_LD_FLAGS -Wl,--gc-sections, -flto -specs=nano.specs -specs=nosys.specs -u_printf_float -u_scanf_float)
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    message(STATUS "WIN32 SYSTEM")
-    set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=nano.specs" "-specs=nosys.specs" "-u_printf_float" "-u_scanf_float")
-else()
-    message(STATUS "OTHERS SYSTEM")
-    set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-u_printf_float" "-u_scanf_float")
-endif()
+set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=rdimon.specs" "-u_printf_float" "-u_scanf_float")
 
 #添加.ld链接脚本路径
 # -T$(LDSCRIPT)依赖的可执行文件链接脚本
