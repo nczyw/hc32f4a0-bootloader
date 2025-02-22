@@ -86,7 +86,7 @@ int32_t BSP_XTAL32_Init(void){
     stc_fcm_init_t stcFcmInit;
     uint32_t u32TimeOut = 0UL;
     uint32_t u32Time = HCLK_VALUE / 5UL;
-
+    
     if (CLK_XTAL32_ON == READ_REG8(CM_CMU->XTAL32CR)) {
         /* Disable xtal32 */
         (void)CLK_Xtal32Cmd(DISABLE);
@@ -131,4 +131,7 @@ int32_t BSP_XTAL32_Init(void){
             return LL_ERR_TIMEOUT;
         }
     }
+    GPIO_SetDebugPort(GPIO_PIN_SWO,DISABLE);
+    GPIO_SetDebugPort(GPIO_PIN_TDI,DISABLE);
+    GPIO_SetDebugPort(GPIO_PIN_TRST,DISABLE);
 }

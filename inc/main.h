@@ -4,6 +4,7 @@
 #include "hc32_ll.h"
 #include "mysys.h"
 #include "mygpio.h"
+#include "iap.h"
 
 /**
  * @brief  Main function of GPIO project

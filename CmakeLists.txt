@@ -117,7 +117,13 @@ ENABLE_LANGUAGE(ASM) #为了让cmake识别启动文件
 # -specs=nosys.specs禁止链接任何系统库(如glibc或newlib)。
 # -u_printf_float显式启用浮点数打印 -u_scanf_float显式启用浮点数输入
 #set(OPTIMIZE_LD_FLAGS -Wl,--gc-sections, -flto -specs=nano.specs -specs=nosys.specs -u_printf_float -u_scanf_float)
-set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=nano.specs" "-specs=nosys.specs" "-u_printf_float" "-u_scanf_float")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    message(STATUS "WIN32 SYSTEM")
+    set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=nano.specs" "-specs=nosys.specs" "-u_printf_float" "-u_scanf_float")
+else()
+    message(STATUS "OTHERS SYSTEM")
+    set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-u_printf_float" "-u_scanf_float")
+endif()
 
 #添加.ld链接脚本路径
 # -T$(LDSCRIPT)依赖的可执行文件链接脚本
@@ -147,6 +153,7 @@ file(GLOB SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/src/*.c"
     "${CMAKE_CURRENT_LIST_DIR}/hardware/src/*.c"
     "${CMAKE_CURRENT_LIST_DIR}/fatfs/src/*.c"
+    "${CMAKE_CURRENT_LIST_DIR}/iap/src/*.c"
 )
 
 #根据源文件、汇编启动文件、链接脚本 生成 .elf可执行文件
@@ -159,6 +166,7 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
     "${CMAKE_CURRENT_LIST_DIR}/inc"
     "${CMAKE_CURRENT_LIST_DIR}/hardware/inc"
     "${CMAKE_CURRENT_LIST_DIR}/fatfs/inc"
+    "${CMAKE_CURRENT_LIST_DIR}/iap/inc"
 )
 set(ELF_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.elf)
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
