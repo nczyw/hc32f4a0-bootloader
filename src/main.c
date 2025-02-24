@@ -10,6 +10,7 @@ int main(void){
     BSP_XTAL32_Init();
     DDL_PrintfInit(BSP_PRINTF_DEVICE,BSP_PRINTF_BAUDRATE,BSP_PRINTF_Preinit);
     init_gpio();
+    i2c1_init();
     //SDCardInit();
 //    LL_PERIPH_WP(LL_PERIPH_ALL);
 //    char  file[512] = {0};

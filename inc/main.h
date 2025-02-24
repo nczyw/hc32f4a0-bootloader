@@ -5,6 +5,7 @@
 #include "mysys.h"
 #include "mygpio.h"
 #include "iap.h"
+#include "iic.h"
 
 /**
  * @brief  Main function of GPIO project
