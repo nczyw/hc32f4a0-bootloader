@@ -9,7 +9,7 @@
 
 #include "ff.h"			/* Obtains integer types */
 #include "diskio.h"		/* Declarations of disk functions */
-#include "sdio.h"
+#include "sd_diskio.h"
 
 /* Definitions of physical drive number for each drive */
 #define SDCard	0		//SD卡
@@ -128,4 +128,7 @@ DRESULT disk_ioctl (
 
 	return RES_PARERR;
 }
-
+__WEAKDEF DWORD get_fattime (void)
+{
+	return 0;
+}

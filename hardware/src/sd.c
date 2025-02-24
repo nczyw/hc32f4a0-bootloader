@@ -24,7 +24,7 @@
  * Include files
  ******************************************************************************/
 #include "sd.h"
-
+#include "mygpio.h"
 /**
  * @addtogroup LL_SDIOC_LIB
  * @{
@@ -141,6 +141,7 @@ int32_t SD_Init(stc_sd_handle_t *handle)
         (void)SDIOC_StructInit(&stcSdInit);
         i32Ret = SDIOC_GetOptimumClockDiv(SDIOC_OUTPUT_CLK_FREQ_400K, &u16ClkDiv);
         if (LL_OK != i32Ret) {
+            
             return LL_ERR_INVD_MD;
         }
         stcSdInit.u16ClockDiv   = u16ClkDiv;

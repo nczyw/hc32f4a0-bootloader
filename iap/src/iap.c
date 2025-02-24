@@ -13,6 +13,7 @@ uint8_t SDCARDLoad(void)
     if(SDCardInit() == LL_OK){  //如果初始化成功
         
         if(SD_GetCardCSD(&SdHandle,&CsdInformation) == LL_OK){  //获取SD卡信息
+            
             return 0 ;  //加载成功
         }
     }

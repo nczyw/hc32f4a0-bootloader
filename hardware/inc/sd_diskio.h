@@ -1,10 +1,17 @@
-#ifndef SDIO_H
-#define SDIO_H
-#include "hc32_ll.h"
-#include "sd.h"
+#ifndef SD_DISKIO_H
+#define SD_DISKIO_H
 
+/* C binding of definitions if building with C++ compiler */
+#ifdef __cplusplus
+extern "C" 
+{
+#endif
+
+/* Include files */
+#include "hc32_ll.h"
 #include "ff.h"
 #include "diskio.h"
+#include "sd.h"
 
 #define SDIOC_SD_UINT                   (CM_SDIOC1)
 #define SDIOC_SD_CLK                    (FCG1_PERIPH_SDIOC1)
@@ -30,7 +37,7 @@
 #define SDIOC_CD_PORT                   (GPIO_PORT_D)
 #define SDIOC_CD_PIN                    (GPIO_PIN_03)
 
-//#define SdCard_Insert()                   (GPIO_ReadInputPins(SDIOC_CD_PORT, SDIOC_CD_PIN))
+#define SdCard_Insert()                   (GPIO_ReadInputPins(SDIOC_CD_PORT, SDIOC_CD_PIN))
 
 
 extern stc_sd_handle_t SdHandle;        //SD卡句柄
@@ -93,5 +100,8 @@ extern DRESULT SDCard_write(const BYTE *buff,LBA_t sector,UINT count);
  */
 extern DRESULT SDCard_ioctl(BYTE cmd , void * buff);
 
-
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* SD_DISKIO_H */

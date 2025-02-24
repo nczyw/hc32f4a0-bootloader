@@ -46,4 +46,18 @@ void BSP_CLK_Init(void);
  *         - LL_ERR_TIMEOUT: XTAL32 enable timeout.
  */
 int32_t BSP_XTAL32_Init(void);
+
+#if (LL_PRINT_ENABLE == DDL_ON)
+#define BSP_PRINTF_DEVICE               (CM_USART4)
+#define BSP_PRINTF_DEVICE_FCG           (FCG3_PERIPH_USART4)
+
+#define BSP_PRINTF_BAUDRATE             (115200UL)
+#define BSP_PRINTF_BAUDRATE_ERR_MAX     (0.025F)
+
+#define BSP_PRINTF_PORT                 (GPIO_PORT_B)
+#define BSP_PRINTF_PIN                  (GPIO_PIN_01)
+#define BSP_PRINTF_PORT_FUNC            (GPIO_FUNC_38)
+int32_t BSP_PRINTF_Preinit(void *vpDevice, uint32_t u32Baudrate);
+#endif
+
 #endif

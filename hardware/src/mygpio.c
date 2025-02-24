@@ -1,5 +1,4 @@
 #include "mygpio.h"
-
 /**
  * @brief Initialize GPIO pins
  * @param None

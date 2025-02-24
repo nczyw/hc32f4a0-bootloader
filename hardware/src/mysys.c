@@ -20,58 +20,43 @@ __WEAKDEF void BSP_CLK_Init(){
     stc_clock_xtal_init_t stcXtalInit;
     stc_clock_pll_init_t stcPLLHInit;
 
-    /* PCLK0, HCLK  Max 240MHz */
-    /* PCLK1, PCLK4 Max 120MHz */
-    /* PCLK2, PCLK3 Max 60MHz  */
-    /* EX BUS Max 120MHz */
-    CLK_SetClockDiv(CLK_BUS_CLK_ALL, \
-                    (CLK_PCLK0_DIV1 | CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 | \
-                     CLK_PCLK3_DIV4 | CLK_PCLK4_DIV2 | CLK_EXCLK_DIV2 | \
+    CLK_SetClockDiv(CLK_BUS_CLK_ALL,
+                    (CLK_PCLK0_DIV1 | CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 |
+                     CLK_PCLK3_DIV4 | CLK_PCLK4_DIV2 | CLK_EXCLK_DIV2 |
                      CLK_HCLK_DIV1));
-
-    GPIO_AnalogCmd(BSP_XTAL_PORT, BSP_XTAL_PIN, ENABLE);
     (void)CLK_XtalStructInit(&stcXtalInit);
     /* Config Xtal and enable Xtal */
     stcXtalInit.u8Mode   = CLK_XTAL_MD_OSC;
     stcXtalInit.u8Drv    = CLK_XTAL_DRV_ULOW;
     stcXtalInit.u8State  = CLK_XTAL_ON;
     stcXtalInit.u8StableTime = CLK_XTAL_STB_2MS;
+
+    GPIO_AnalogCmd(BSP_XTAL_PORT, BSP_XTAL_PIN, ENABLE);
     (void)CLK_XtalInit(&stcXtalInit);
 
     (void)CLK_PLLStructInit(&stcPLLHInit);
-    /* VCO = (8/1)*120 = 960MHz*/
-    stcPLLHInit.u8PLLState = CLK_PLL_ON;
-    stcPLLHInit.PLLCFGR = 0UL;
-    stcPLLHInit.PLLCFGR_f.PLLM = 1UL - 1UL;
-    stcPLLHInit.PLLCFGR_f.PLLN = 120UL - 1UL;
-    stcPLLHInit.PLLCFGR_f.PLLP = 4UL - 1UL;
-    stcPLLHInit.PLLCFGR_f.PLLQ = 4UL - 1UL;
-    stcPLLHInit.PLLCFGR_f.PLLR = 4UL - 1UL;
+    /* VCO = (8/1)*100 = 800MHz*/
+    stcPLLHInit.u8PLLState      = CLK_PLL_ON;
+    stcPLLHInit.PLLCFGR         = 0UL;
+    stcPLLHInit.PLLCFGR_f.PLLM  = 1UL - 1UL;
+    stcPLLHInit.PLLCFGR_f.PLLN  = 100UL - 1UL;
+    stcPLLHInit.PLLCFGR_f.PLLP  = 4UL - 1UL;
+    stcPLLHInit.PLLCFGR_f.PLLQ  = 4UL - 1UL;
+    stcPLLHInit.PLLCFGR_f.PLLR  = 4UL - 1UL;
     stcPLLHInit.PLLCFGR_f.PLLSRC = CLK_PLL_SRC_XTAL;
     (void)CLK_PLLInit(&stcPLLHInit);
 
-    /* Highspeed SRAM set to 0 Read/Write wait cycle */
+    /* SRAM Read/Write wait cycle setting */
     SRAM_SetWaitCycle(SRAM_SRAMH, SRAM_WAIT_CYCLE0, SRAM_WAIT_CYCLE0);
-
-    /* SRAM1_2_3_4_backup set to 1 Read/Write wait cycle */
     SRAM_SetWaitCycle((SRAM_SRAM123 | SRAM_SRAM4 | SRAM_SRAMB), SRAM_WAIT_CYCLE1, SRAM_WAIT_CYCLE1);
-
     /* 0-wait @ 40MHz */
-    (void)EFM_SetWaitCycle(EFM_WAIT_CYCLE5);
-
+    EFM_SetWaitCycle(EFM_WAIT_CYCLE5);
     /* 4 cycles for 200 ~ 250MHz */
     GPIO_SetReadWaitCycle(GPIO_RD_WAIT4);
-
     CLK_SetSysClockSrc(CLK_SYSCLK_SRC_PLL);
-
-    /* Reset cache ram */
-    EFM_CacheRamReset(ENABLE);
-    EFM_CacheRamReset(DISABLE);
-
-    /* Enable cache */
-    EFM_PrefetchCmd(ENABLE);
-    EFM_DCacheCmd(ENABLE);
-    EFM_ICacheCmd(ENABLE);
+    GPIO_SetDebugPort(GPIO_PIN_SWO,DISABLE);
+    GPIO_SetDebugPort(GPIO_PIN_TDI,DISABLE);
+    GPIO_SetDebugPort(GPIO_PIN_TRST,DISABLE);
 }
 
 /**
@@ -131,7 +116,53 @@ int32_t BSP_XTAL32_Init(void){
             return LL_ERR_TIMEOUT;
         }
     }
-    GPIO_SetDebugPort(GPIO_PIN_SWO,DISABLE);
-    GPIO_SetDebugPort(GPIO_PIN_TDI,DISABLE);
-    GPIO_SetDebugPort(GPIO_PIN_TRST,DISABLE);
+    
 }
+
+#if (LL_PRINT_ENABLE == DDL_ON)
+/**
+ * @brief  BSP printf device, clock and port pre-initialize.
+ * @param  [in] vpDevice                Pointer to print device
+ * @param  [in] u32Baudrate             Print device communication baudrate
+ * @retval int32_t:
+ *           - LL_OK:                   Initialize successfully.
+ *           - LL_ERR:                  Initialize unsuccessfully.
+ *           - LL_ERR_INVD_PARAM:       The u32Baudrate value is 0.
+ */
+int32_t BSP_PRINTF_Preinit(void *vpDevice, uint32_t u32Baudrate)
+{
+    uint32_t u32Div;
+    float32_t f32Error;
+    stc_usart_uart_init_t stcUartInit;
+    int32_t i32Ret = LL_ERR_INVD_PARAM;
+
+    (void)vpDevice;
+
+    if (0UL != u32Baudrate) {
+        /* Set TX port function */
+        GPIO_SetFunc(BSP_PRINTF_PORT, BSP_PRINTF_PIN, BSP_PRINTF_PORT_FUNC);
+
+        /* Enable clock  */
+        FCG_Fcg3PeriphClockCmd(BSP_PRINTF_DEVICE_FCG, ENABLE);
+
+        /* Configure UART */
+        (void)USART_UART_StructInit(&stcUartInit);
+        stcUartInit.u32OverSampleBit = USART_OVER_SAMPLE_8BIT;
+        (void)USART_UART_Init(BSP_PRINTF_DEVICE, &stcUartInit, NULL);
+
+        for (u32Div = 0UL; u32Div <= USART_CLK_DIV64; u32Div++) {
+            USART_SetClockDiv(BSP_PRINTF_DEVICE, u32Div);
+            i32Ret = USART_SetBaudrate(BSP_PRINTF_DEVICE, u32Baudrate, &f32Error);
+            if ((LL_OK == i32Ret) && \
+                ((-BSP_PRINTF_BAUDRATE_ERR_MAX <= f32Error) && (f32Error <= BSP_PRINTF_BAUDRATE_ERR_MAX))) {
+                USART_FuncCmd(BSP_PRINTF_DEVICE, USART_TX, ENABLE);
+                break;
+            } else {
+                i32Ret = LL_ERR;
+            }
+        }
+    }
+
+    return i32Ret;
+}
+#endif

@@ -121,7 +121,7 @@ ENABLE_LANGUAGE(ASM) #为了让cmake识别启动文件
 # -specs=libnosys.specs 与 nosys.specs 类似，但更侧重于不使用系统调用的裸机环境。在这种配置下，你可以自行实现所需的系统调用，或者完全不使用系统调用。
 # -u_printf_float显式启用浮点数打印 -u_scanf_float显式启用浮点数输入
 #set(OPTIMIZE_LD_FLAGS -Wl,--gc-sections, -flto -specs=nano.specs -specs=nosys.specs -u_printf_float -u_scanf_float)
-set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=rdimon.specs" "-u_printf_float" "-u_scanf_float")
+set(OPTIMIZE_LD_FLAGS "-Wl,--gc-sections" "-flto" "-specs=nosys.specs" "-u_printf_float" "-u_scanf_float")
 
 #添加.ld链接脚本路径
 # -T$(LDSCRIPT)依赖的可执行文件链接脚本

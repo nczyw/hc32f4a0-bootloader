@@ -2,7 +2,7 @@
 #define IAP_H
 
 #include "hc32_ll.h"
-#include "sdio.h"
+#include "sd_diskio.h"
 #include "flash.h"
 #include "mygpio.h"
 
