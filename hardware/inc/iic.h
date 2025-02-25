@@ -12,8 +12,8 @@
 #define I2C1_SCL_PIN           (GPIO_PIN_01)
 #define I2C1_SDA_PORT          (GPIO_PORT_I)
 #define I2C1_SDA_PIN           (GPIO_PIN_12)
-#define I2C1_SCL_FUNC          (GPIO_FUNC_49)
-#define I2C1_SDA_FUNC          (GPIO_FUNC_48)
+#define I2C1_SCL_FUNC          (GPIO_FUNC_51)
+#define I2C1_SDA_FUNC          (GPIO_FUNC_50)
 
 #define I2C1_BAUDRATE        (100000UL)
 #define I2C1_TIMEOUT         (0x40000U)
@@ -31,10 +31,8 @@
  * @param none
  * @retval int32_t  是否成功
  */
-int32_t i2c1_init(void);
-void i2c1_deinit(void);
-int32_t i2c1_write(uint16_t u16Addr, const uint8_t *pu8Buf, uint32_t u32Len);
-//int32_t i2c1_read(uint16_t u16Addr, uint8_t *pu8Buf, uint32_t u32Len);
-//int32_t i2c1_waitidle(void);
-
+int32_t i2c1_init   (void);
+void    i2c1_deinit (void);
+int32_t i2c1_write(CM_I2C_TypeDef * I2Cx,uint16_t DevAddr , uint16_t MemAddr,uint16_t MemAddrLen , const uint8_t *dataBuf, uint32_t dataBufLen);
+int32_t i2c1_read (CM_I2C_TypeDef * I2Cx,uint16_t DevAddr , uint16_t MemAddr,uint16_t MemAddrLen , uint8_t *dataBuf, uint32_t dataBufLen);
 #endif

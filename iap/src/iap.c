@@ -1,4 +1,7 @@
 #include "iap.h"
+#include "iic.h"
+uint8_t  AppWriteDone = 0; //APP写入完成标志
+uint8_t  AppInfError = 0;
 
 func_ptr_t JumpToApp = NULL;
 
@@ -42,7 +45,7 @@ uint8_t IAP_Init(const TCHAR *path)
 	res = f_open(&fsrc,path,FA_READ|FA_OPEN_EXISTING);	//打开文件
 	if(res == FR_OK){	//文件打开成功 
         uint32_t ReadCount = fsrc.obj.objsize / sizeof(APPBuff);       //计算要读多少次
-				uint32_t filesize = fsrc.obj.objsize;
+		uint32_t filesize = fsrc.obj.objsize;
         if(filesize % sizeof(APPBuff) != 0){ //表示有不完整的数据
             ReadCount++;    
         }
@@ -53,11 +56,16 @@ uint8_t IAP_Init(const TCHAR *path)
                 if(i == 0){     //第一次读取数据时，判断栈顶是否合法，不合法，要直接退出不准更新
                     uint32_t u32StackTop = *((uint32_t *)APPBuff);      //获取栈顶地址
                     if ((u32StackTop <= SRAM_BASE) || (u32StackTop > (SRAM_BASE + SRAM_SIZE))) {    //判断地址是否合法
+                        DDL_Printf("Stack Top Error!\r\n");
                         f_close(&fsrc);f_mount(&fs,"0:",0);return 1 ;   //返回错误
                     }
                     Updating();
                     //栈顶地址合法后，再清空APP段的数据
-                    FLASH_EraseSector(IAP_BOOT_SIZE,EFM_END_ADDR + 1 - IAP_BOOT_SIZE);    //清空APP程序段
+                    FLASH_EraseSector(IAP_BOOT_SIZE,filesize);    //清空APP程序段
+                    AppWriteDone = 0 ;     //写入非1值，表示APP已经开始更新了
+                    if(i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,EE_24CXX_MEM_ADDR_LEN,&AppWriteDone,1) != LL_OK){
+                        f_close(&fsrc);f_mount(&fs,"0:",0);return 1 ;   //返回错误
+                    }
                 }
                 if(FLASH_WriteData(i * sizeof(APPBuff) + 0 + IAP_BOOT_SIZE ,APPBuff,br) != LL_OK){  //写入flash失败
                     f_close(&fsrc);f_mount(&fs,"0:",0);return 1 ;   //返回错误
@@ -68,9 +76,9 @@ uint8_t IAP_Init(const TCHAR *path)
             }
         }
         f_close(&fsrc);f_mount(&fs,"0:",0); //APP程序写入flash完成，再写入完成标志
-         uint32_t WriteOk = 0x01 ;           //APP写入完成标志
-		if(FLASH_WriteData(FLASH_SIZE - 4 , (uint8_t *)&WriteOk , sizeof(WriteOk)) != LL_OK){   //写入完成标志失败，也要当成失败
-            return 1 ;
+        AppWriteDone = 1 ;     //写入1,表示APP已经写入完成
+        if(i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,EE_24CXX_MEM_ADDR_LEN,&AppWriteDone,1) != LL_OK){
+            return 1 ;   //返回错误
         }
         
 	}
@@ -91,7 +99,7 @@ FRESULT IAP_FileFind(char * file)
     
     //先加载SD卡
     if(SDCARDLoad() != LL_OK){  //SD卡加载失败
-        
+        DDL_Printf("SDCard load failed!\r\n");
         return FR_DISK_ERR ;
     }
     
@@ -101,17 +109,44 @@ FRESULT IAP_FileFind(char * file)
     FRESULT     res;
     UINT        br;
     uint8_t     namebuffer[256] = {0};
+
+    //更新标志存放
+    FIL         fupdate; 
+    uint8_t     updateflag;
     
     res = f_mount(&fs,"0:",1);      //挂载驱动器
     if(res != FR_OK){
+        DDL_Printf("SDCard mount failed!\r\n");
         return res;
     }
-    res = f_open(&fsrc,"0:/update/config",FA_READ|FA_OPEN_EXISTING);	//打开文件
+    DDL_Printf("SDCard mount success!\r\n");
+    if(AppInfError == 0){
+        res = f_open(&fupdate,"0:/update/update.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件,先看看有没有更新指令
+        if(res == FR_OK){   //文件打开成功
+            DDL_Printf("SDCard open 0:/update/update.txt success!\r\n");
+            res = f_read(&fupdate,&updateflag,1,&br); //读取更新标志
+            f_close(&fupdate);
+        }
+        else {
+            DDL_Printf("SDCard open 0:/update/update.txt failed!\r\n");
+            f_mount(&fs,"0:",0);      //卸载驱动器
+            return res;
+        }
+        if(updateflag != 0x31){          //表示不需要更新
+            f_mount(&fs,"0:",0);      //卸载驱动器
+            return res;
+        }
+        DDL_Printf("Need to update\r\n");
+    }
+
+    res = f_open(&fsrc,"0:/update/config.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件
     if(res == FR_OK){   //文件打开成功
+        DDL_Printf("SDCard open 0:/update/config.txt success!\r\n");
         res = f_read(&fsrc,namebuffer,sizeof(namebuffer),&br); //读取配置文件
         f_close(&fsrc);
     }
     else {
+        DDL_Printf("SDCard open 0:/update/config.txt failed!\r\n");
         f_mount(&fs,"0:",0);      //卸载驱动器
         return res;
     }
@@ -123,8 +158,11 @@ FRESULT IAP_FileFind(char * file)
     int len = 0 ;
     res = f_opendir(&dir, dim);
     if (res != FR_OK) {
+        DDL_Printf("SDCard open %s failed!\r\n",dim);
+        f_mount(&fs,"0:",0);      //卸载驱动器
         return res;
     }
+    DDL_Printf("SDCard open path %s success!\r\n",dim);
     //开始遍历目录下的所有程序
     while (1){
         res = f_readdir(&dir, &fileinfo);   //读取文件信息
@@ -162,27 +200,20 @@ FRESULT IAP_FileFind(char * file)
 int32_t IAP_JumpToApp(uint32_t u32Addr)
 {
     uint32_t u32StackTop = *((__IO uint32_t *)u32Addr);
-    uint32_t WriteOk = *((__IO uint32_t *)(FLASH_SIZE - 4));     //获取APP程序是否写入完成标志
-    if(WriteOk == 0x01){        //如果写成0x01,表示SD卡程序已经顺利写进flash,可以执行跳转检查
+    if(AppWriteDone == 0x01){        //如果写成0x01,表示SD卡程序已经顺利写进flash,可以执行跳转检查
         /* Check stack top pointer. */
         if ((u32StackTop > SRAM_BASE) && (u32StackTop <= (SRAM_BASE + SRAM_SIZE))) {
-			//__disable_irq();
             IAP_PeriphDeinit();
-			/* for(int i=0; i<144; i++)
-			{
-					NVIC_DisableIRQ((IRQn_Type)i);
-					NVIC_ClearPendingIRQ((IRQn_Type)i);
-					//enIrqResign(i);
-			}
-			__enable_irq(); */
             /* Jump to user application */
             uint32_t JumpAddr = *(__IO uint32_t *)(u32Addr + 4U);
             JumpToApp = (func_ptr_t)JumpAddr;
             /* Initialize user application's Stack Pointer */
-			//__set_CONTROL(0);
-			__set_MSP(u32StackTop);
-			//__set_PSP(u32StackTop);		
+			__set_MSP(u32StackTop);	
             JumpToApp();
+        }
+        else{
+            AppInfError = 1 ;       //栈顶地址非法
+            DDL_Printf("The stack top address is invalid.");
         }
     }
     return LL_ERR;
@@ -239,4 +270,31 @@ void IAP_CLK_DeInit(void)
     EFM_SetWaitCycle(EFM_WAIT_CYCLE0);
     /* 0 cycles for 50MHz */
     GPIO_SetReadWaitCycle(GPIO_RD_WAIT0);
+}
+
+uint8_t Clean_updateflag(void)
+{
+    FATFS       fs;
+    FIL         fsrc;         
+    FRESULT     res;
+    UINT        br;
+    uint8_t     updateflog = 0;         //清空更新标志
+    if(SDCARDLoad() != LL_OK){          //如果SD卡加载失败,函数直接返回
+        return 1 ;
+    }
+	if(f_mount(&fs,"0:",1) != FR_OK){		//挂载失败
+		return 1 ;
+	}
+	res = f_open(&fsrc,"0:/update/update.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件
+	if(res == FR_OK){	//文件打开成功 
+        res = f_write(&fsrc,&updateflog,1,&br);
+        if(res == FR_OK){
+            DDL_Printf("Update flag cleared successfully.");
+        }
+        else{
+            AppInfError = 1;
+            DDL_Printf("Update flag cleared failed.");
+        }
+    }
+    return 0;
 }

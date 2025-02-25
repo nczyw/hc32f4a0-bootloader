@@ -5,32 +5,49 @@
  * @retval int32_t return value, if needed
  */
 int main(void){
-    LL_PERIPH_WE(LL_PERIPH_ALL);
-    BSP_CLK_Init();
-    BSP_XTAL32_Init();
-    DDL_PrintfInit(BSP_PRINTF_DEVICE,BSP_PRINTF_BAUDRATE,BSP_PRINTF_Preinit);
-    init_gpio();
-    i2c1_init();
-    //SDCardInit();
-//    LL_PERIPH_WP(LL_PERIPH_ALL);
-//    char  file[512] = {0};
-  for (;;) {
-    //    if(IAP_FileFind(file) == FR_OK) {
-    //      int result = strcmp(file,"0:/update/rayyi-tech_LeakTest/a.bin");
-    //      if(result == 0){
-            
-          //  IAP_Init(file);	//应用程序升级
-    //      }
-			    
-	//	}
-    //    Updating();
-	//	
-	//	IAP_JumpToApp(IAP_BOOT_SIZE);
-     
-    DeUpdate();
-    DDL_Printf("hello world\r\n"); 
-		DDL_DelayMS(500);
-    Updating();
-    DDL_DelayMS(500);
+  LL_PERIPH_WE(LL_PERIPH_ALL);
+  BSP_CLK_Init();
+  BSP_XTAL32_Init();
+  DDL_PrintfInit(BSP_PRINTF_DEVICE,BSP_PRINTF_BAUDRATE,BSP_PRINTF_Preinit);
+  DDL_Printf("BootLoader Running.\r\n");
+  init_gpio();
+  i2c1_init();
+  //  uint8_t tmp = 0 ;
+  //  DDL_Printf("Size of struct MyStruct: %zu bytes\n", sizeof(APP_Flag_t));
+    //i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,2,&tmp,1);
+  i2c1_read(I2C1_UNIT,EE_24CXX_DEV_ADDR,AppWriteDoneADDR,EE_24CXX_MEM_ADDR_LEN,(uint8_t *)&AppWriteDone,sizeof(AppWriteDone)); //读取app相关配置
+  //SDCardInit();
+  //LL_PERIPH_WP(LL_PERIPH_ALL);
+  DeUpdate(); //关闭指示灯
+  char  file[512] = {0};
+  if(IAP_FileFind(file) == FR_OK) {       //先去看看是否需要更新
+    if(file[0] != 0){                     //表示需要更新
+      DDL_Printf("File name is %s\r\n",file);
+      IAP_Init(file);                     //应用程序更新
+      Clean_updateflag();                 //清除更新标志
+    }
+    else{
+      DDL_Printf("No need to update\r\n");
+    }
+  }
+  while(1){
+    
+    if(AppWriteDone == 1){     //表示APP曾经完整的写入过，可以直接jump，或者查看是否要更新
+      IAP_JumpToApp(IAP_BOOT_SIZE);     //直接Jump
+    }
+    else{
+      memset(file,0,sizeof(file));    //清空文件缓存
+      if(IAP_FileFind(file) == FR_OK) {   //APP段没有正确的数据，必须要强制更新,忽略更新标志，直接查找更新文件
+        if(file[0] != 0){                     //表示需要更新
+          DDL_Printf("File name is %s\r\n",file);
+          IAP_Init(file);                     //应用程序更新
+          Clean_updateflag();                 //清除更新标志
+        }
+      }
+    }
+  //  DeUpdate();
+    DDL_DelayMS(2000);    //如果强制更新失败，那就等待2秒再执行
+  //  Updating();
+  //  DDL_DelayMS(1000);
   }
 }

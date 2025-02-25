@@ -11,6 +11,13 @@
 #define IAP_BOOT_SIZE    (0x10000UL)
 #define APPADDR          IAP_BOOT_SIZE
 
+#define AppWriteDoneADDR      (0)        //APP写入完成标志地址
+
+
+extern uint8_t  AppWriteDone;                  //APP写入完成标志
+extern uint8_t  AppInfError;                    //APP有非法内容
+
+
 extern func_ptr_t JumpToApp;    //函数指针
 extern uint8_t SDCardLoaded;    //SD卡是否已经加载
 
@@ -66,4 +73,5 @@ extern void SysTick_DeInit(void);
  */
 extern void IAP_CLK_DeInit(void);
 
+extern uint8_t Clean_updateflag(void);
 #endif

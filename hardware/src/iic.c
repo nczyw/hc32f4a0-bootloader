@@ -21,9 +21,74 @@ void i2c1_deinit(void)
     GPIO_SetFunc(I2C1_SDA_PORT, I2C1_SDA_PORT, GPIO_FUNC_0);
     (void)I2C_DeInit(I2C1_UNIT);
 }
-int32_t i2c1_write(uint16_t u16Addr, const uint8_t *pu8Buf, uint32_t u32Len)
+int32_t i2c1_write(CM_I2C_TypeDef *I2Cx, uint16_t DevAddr, uint16_t MemAddr, uint16_t MemAddrLen, const uint8_t *dataBuf, uint32_t dataBufLen)
 {
-    return 0;
+    int32_t i32Ret;
+
+    uint16_t MemAddrTemp;
+    if(MemAddrLen == 1U){       //单字节内存地址
+        MemAddrTemp = MemAddr;
+    }
+    else{
+        MemAddrTemp = (uint16_t)((((uint32_t)MemAddr >> 8) & 0xFFUL) + (((uint32_t)MemAddr << 8) & 0xFF00UL));
+    }
+
+    I2C_SWResetCmd(I2Cx, ENABLE);
+    I2C_SWResetCmd(I2Cx, DISABLE);
+    i32Ret = I2C_Start(I2Cx, I2C1_TIMEOUT);
+    if (LL_OK == i32Ret) {
+        i32Ret = I2C_TransAddr(I2Cx, DevAddr, I2C_DIR_TX, I2C1_TIMEOUT);
+
+        if (LL_OK == i32Ret) {
+            i32Ret = I2C_TransData(I2Cx, (const uint8_t *)&MemAddrTemp, MemAddrLen, I2C1_TIMEOUT);
+            if (LL_OK == i32Ret) {
+                i32Ret = I2C_TransData(I2Cx, dataBuf, dataBufLen, I2C1_TIMEOUT);
+            }
+        }
+    }
+    (void)I2C_Stop(I2Cx, I2C1_TIMEOUT);
+    return i32Ret;
+}
+int32_t i2c1_read(CM_I2C_TypeDef *I2Cx, uint16_t DevAddr, uint16_t MemAddr, uint16_t MemAddrLen, uint8_t *dataBuf, uint32_t dataBufLen)
+{
+    int32_t i32Ret;
+    uint16_t MemAddrTemp;
+    if(MemAddrLen == 1U){       //单字节内存地址
+        MemAddrTemp = MemAddr;
+    }
+    else{
+        MemAddrTemp = (uint16_t)((((uint32_t)MemAddr >> 8) & 0xFFUL) + (((uint32_t)MemAddr << 8) & 0xFF00UL));
+    }
+    I2C_SWResetCmd(I2Cx, ENABLE);
+    I2C_SWResetCmd(I2Cx, DISABLE);
+    i32Ret = I2C_Start(I2Cx, I2C1_TIMEOUT);
+    if (LL_OK == i32Ret) {
+        i32Ret = I2C_TransAddr(I2Cx, DevAddr, I2C_DIR_TX, I2C1_TIMEOUT);
+
+        if (LL_OK == i32Ret) {
+            i32Ret = I2C_TransData(I2Cx, (const uint8_t *)&MemAddrTemp, MemAddrLen, I2C1_TIMEOUT);
+            if (LL_OK == i32Ret) {
+                i32Ret = I2C_Restart(I2Cx, I2C1_TIMEOUT);
+                if (LL_OK == i32Ret) {
+                    if (1UL == dataBufLen) {
+                        I2C_AckConfig(I2Cx, I2C_NACK);
+                    }
+
+                    i32Ret = I2C_TransAddr(I2Cx, DevAddr, I2C_DIR_RX, I2C1_TIMEOUT);
+                    if (LL_OK == i32Ret) {
+                        i32Ret = I2C_MasterReceiveDataAndStop(I2Cx, dataBuf, dataBufLen, I2C1_TIMEOUT);
+                    }
+                    I2C_AckConfig(I2Cx, I2C_ACK);
+                }
+            }
+        }
+    }
+
+    if (LL_OK != i32Ret) {
+        (void)I2C_Stop(I2Cx, I2C1_TIMEOUT);
+    }
+
+    return i32Ret;
 }
 /**
  * @brief  BSP I2C initialize
