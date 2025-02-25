@@ -30,6 +30,7 @@ int main(void){
       DDL_Printf("No need to update\r\n");
     }
   }
+  DDL_DelayMS(1);
   while(1){
     IAP_JumpToApp(IAP_BOOT_SIZE);     //直接Jump
     memset(file,0,sizeof(file));    //清空文件缓存

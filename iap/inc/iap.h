@@ -8,7 +8,7 @@
 
 #include <string.h>
 
-#define IAP_BOOT_SIZE    (0x10000UL)
+#define IAP_BOOT_SIZE    0x20000
 #define APPADDR          IAP_BOOT_SIZE
 
 #define AppWriteDoneADDR      (0)        //APP写入完成标志地址
