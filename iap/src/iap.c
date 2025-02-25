@@ -76,10 +76,17 @@ uint8_t IAP_Init(const TCHAR *path)
             }
         }
         f_close(&fsrc);f_mount(&fs,"0:",0); //APP程序写入flash完成，再写入完成标志
-        AppWriteDone = 1 ;     //写入1,表示APP已经写入完成
-        if(i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,EE_24CXX_MEM_ADDR_LEN,&AppWriteDone,1) != LL_OK){
-            return 1 ;   //返回错误
+        if(ReadCount > 0){
+            AppWriteDone = 1 ;     //写入1,表示APP已经写入完成
+            if(i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,EE_24CXX_MEM_ADDR_LEN,&AppWriteDone,1) != LL_OK){
+                DDL_Printf("The app write completion flag failed.\r\n");
+                return 1 ;   //返回错误
+            }
         }
+        else{
+            DDL_Printf("The app size is 0 and cannot be written.\r\n");
+        }
+        
         
 	}
     else {
@@ -211,11 +218,9 @@ int32_t IAP_JumpToApp(uint32_t u32Addr)
 			__set_MSP(u32StackTop);	
             JumpToApp();
         }
-        else{
-            AppInfError = 1 ;       //栈顶地址非法
-            DDL_Printf("The stack top address is invalid.");
-        }
     }
+    AppInfError = 1 ;       //栈顶地址非法
+    DDL_Printf("The stack top address is invalid or the app has not finished writing.");
     return LL_ERR;
 }
 

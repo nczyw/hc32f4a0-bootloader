@@ -31,20 +31,16 @@ int main(void){
     }
   }
   while(1){
-    
-    if(AppWriteDone == 1){     //表示APP曾经完整的写入过，可以直接jump，或者查看是否要更新
-      IAP_JumpToApp(IAP_BOOT_SIZE);     //直接Jump
-    }
-    else{
-      memset(file,0,sizeof(file));    //清空文件缓存
-      if(IAP_FileFind(file) == FR_OK) {   //APP段没有正确的数据，必须要强制更新,忽略更新标志，直接查找更新文件
-        if(file[0] != 0){                     //表示需要更新
-          DDL_Printf("File name is %s\r\n",file);
-          IAP_Init(file);                     //应用程序更新
-          Clean_updateflag();                 //清除更新标志
-        }
+    IAP_JumpToApp(IAP_BOOT_SIZE);     //直接Jump
+    memset(file,0,sizeof(file));    //清空文件缓存
+    if(IAP_FileFind(file) == FR_OK) {   //APP段没有正确的数据，必须要强制更新,忽略更新标志，直接查找更新文件
+      if(file[0] != 0){                     //表示需要更新
+        DDL_Printf("File name is %s\r\n",file);
+        IAP_Init(file);                     //应用程序更新
+        Clean_updateflag();                 //清除更新标志
       }
     }
+    
   //  DeUpdate();
     DDL_DelayMS(2000);    //如果强制更新失败，那就等待2秒再执行
   //  Updating();
