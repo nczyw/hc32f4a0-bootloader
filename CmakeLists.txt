@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/drivers/toolchain/toolchain.cmake" CACHE FILEPATH "Toolchain file")
-project(hc32f4a0ritb_bootloader LANGUAGES C ASM)
+project(hc32f4a0ritb_bootloader LANGUAGES C ASM VERSION 1.0.0)
 
 # 链接的类型设置为STATIC, 以便嵌入式ARM-GNU通过CMake的"编译器检查"
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
