@@ -1,5 +1,6 @@
 #include "iap.h"
 #include "iic.h"
+#include "uart_debug.h"
 uint8_t  AppWriteDone = 0; //APP写入完成标志
 uint8_t  AppInfError = 0;
 
@@ -16,7 +17,6 @@ uint8_t SDCARDLoad(void)
     if(SDCardInit() == LL_OK){  //如果初始化成功
         
         if(SD_GetCardCSD(&SdHandle,&CsdInformation) == LL_OK){  //获取SD卡信息
-            
             return 0 ;  //加载成功
         }
     }
@@ -56,7 +56,7 @@ uint8_t IAP_Init(const TCHAR *path)
                 if(i == 0){     //第一次读取数据时，判断栈顶是否合法，不合法，要直接退出不准更新
                     uint32_t u32StackTop = *((uint32_t *)APPBuff);      //获取栈顶地址
                     if ((u32StackTop <= SRAM_BASE) || (u32StackTop > (SRAM_BASE + SRAM_SIZE))) {    //判断地址是否合法
-                        DDL_Printf("Stack Top Error!\r\n");
+                        uart_debug_send("Stack Top Error!\r\n");
                         f_close(&fsrc);f_mount(&fs,"0:",0);return 1 ;   //返回错误
                     }
                     Updating();
@@ -79,17 +79,18 @@ uint8_t IAP_Init(const TCHAR *path)
         if(ReadCount > 0){
             AppWriteDone = 1 ;     //写入1,表示APP已经写入完成
             if(i2c1_write(I2C1_UNIT,EE_24CXX_DEV_ADDR,0,EE_24CXX_MEM_ADDR_LEN,&AppWriteDone,1) != LL_OK){
-                DDL_Printf("The app write completion flag failed.\r\n");
+                uart_debug_send("The app write completion flag failed.\r\n");
                 return 1 ;   //返回错误
             }
         }
         else{
-            DDL_Printf("The app size is 0 and cannot be written.\r\n");
+            uart_debug_send("The app size is 0 and cannot be written.\r\n");
         }
         
         
 	}
     else {
+        uart_debug_send("The file does not exist!\r\n");
         f_mount(&fs,"0:",0);return 1 ;
     }
 	return 0 ;
@@ -106,7 +107,7 @@ FRESULT IAP_FileFind(char * file)
     
     //先加载SD卡
     if(SDCARDLoad() != LL_OK){  //SD卡加载失败
-        DDL_Printf("SDCard load failed!\r\n");
+        uart_debug_send("SDCard load failed!\r\n");
         return FR_DISK_ERR ;
     }
     
@@ -123,19 +124,19 @@ FRESULT IAP_FileFind(char * file)
     
     res = f_mount(&fs,"0:",1);      //挂载驱动器
     if(res != FR_OK){
-        DDL_Printf("SDCard mount failed!\r\n");
+        uart_debug_send("SDCard mount failed!\r\n");
         return res;
     }
-    DDL_Printf("SDCard mount success!\r\n");
+    uart_debug_send("SDCard loading success!\r\n");
     if(AppInfError == 0){
         res = f_open(&fupdate,"0:/update/update.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件,先看看有没有更新指令
         if(res == FR_OK){   //文件打开成功
-            DDL_Printf("SDCard open 0:/update/update.txt success!\r\n");
+            uart_debug_send("SDCard open 0:/update/update.txt success!\r\n");
             res = f_read(&fupdate,&updateflag,1,&br); //读取更新标志
             f_close(&fupdate);
         }
         else {
-            DDL_Printf("SDCard open 0:/update/update.txt failed!\r\n");
+            uart_debug_send("SDCard open 0:/update/update.txt failed!\r\n");
             f_mount(&fs,"0:",0);      //卸载驱动器
             return res;
         }
@@ -143,17 +144,17 @@ FRESULT IAP_FileFind(char * file)
             f_mount(&fs,"0:",0);      //卸载驱动器
             return res;
         }
-        DDL_Printf("Need to update\r\n");
+        uart_debug_send("Need to update\r\n");
     }
 
     res = f_open(&fsrc,"0:/update/config.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件
     if(res == FR_OK){   //文件打开成功
-        DDL_Printf("SDCard open 0:/update/config.txt success!\r\n");
+        uart_debug_send("SDCard open 0:/update/config.txt success!\r\n");
         res = f_read(&fsrc,namebuffer,sizeof(namebuffer),&br); //读取配置文件
         f_close(&fsrc);
     }
     else {
-        DDL_Printf("SDCard open 0:/update/config.txt failed!\r\n");
+        uart_debug_send("SDCard open 0:/update/config.txt failed!\r\n");
         f_mount(&fs,"0:",0);      //卸载驱动器
         return res;
     }
@@ -165,11 +166,15 @@ FRESULT IAP_FileFind(char * file)
     int len = 0 ;
     res = f_opendir(&dir, dim);
     if (res != FR_OK) {
-        DDL_Printf("SDCard open %s failed!\r\n",dim);
+        uart_debug_send("SDCard open ");
+        uart_debug_send(dim);
+        uart_debug_send(" failed!\r\n");
         f_mount(&fs,"0:",0);      //卸载驱动器
         return res;
     }
-    DDL_Printf("SDCard open path %s success!\r\n",dim);
+    uart_debug_send("SDCard open ");
+    uart_debug_send(dim);
+    uart_debug_send(" success!\r\n");
     //开始遍历目录下的所有程序
     while (1){
         res = f_readdir(&dir, &fileinfo);   //读取文件信息
@@ -220,7 +225,7 @@ int32_t IAP_JumpToApp(uint32_t u32Addr)
         }
     }
     AppInfError = 1 ;       //栈顶地址非法
-    DDL_Printf("The stack top address is invalid or the app has not finished writing.");
+    uart_debug_send("Stack top address is invalid or the app has not finished writing.\r\n");
     return LL_ERR;
 }
 
@@ -237,6 +242,7 @@ void IAP_PeriphDeinit(void)
     GPIO_DeInit();
     SD_DeInit(&SdHandle);       //关闭SD卡功能
     /* Peripheral registers write protected */
+    EFM_SequenceSectorOperateCmd(FLASH_SECTOR0_NUM, FLASH_SECTOR_NUM, DISABLE);
     EFM_FWMC_Cmd(DISABLE);
     LL_PERIPH_WP(LL_PERIPH_ALL);
 }
@@ -275,6 +281,7 @@ void IAP_CLK_DeInit(void)
     EFM_SetWaitCycle(EFM_WAIT_CYCLE0);
     /* 0 cycles for 50MHz */
     GPIO_SetReadWaitCycle(GPIO_RD_WAIT0);
+    deint_debug();
 }
 
 uint8_t Clean_updateflag(void)
@@ -283,23 +290,25 @@ uint8_t Clean_updateflag(void)
     FIL         fsrc;         
     FRESULT     res;
     UINT        br;
-    uint8_t     updateflog = 0;         //清空更新标志
+    uint8_t     updateflog = 0x30;         //清空更新标志
     if(SDCARDLoad() != LL_OK){          //如果SD卡加载失败,函数直接返回
         return 1 ;
     }
 	if(f_mount(&fs,"0:",1) != FR_OK){		//挂载失败
 		return 1 ;
 	}
-	res = f_open(&fsrc,"0:/update/update.txt",FA_READ|FA_OPEN_EXISTING);	//打开文件
+	res = f_open(&fsrc,"0:/update/update.txt",FA_WRITE |FA_CREATE_ALWAYS);	//打开文件
 	if(res == FR_OK){	//文件打开成功 
         res = f_write(&fsrc,&updateflog,1,&br);
         if(res == FR_OK){
-            DDL_Printf("Update flag cleared successfully.");
+            uart_debug_send("Update flag cleared successfully.\r\n");
         }
         else{
             AppInfError = 1;
-            DDL_Printf("Update flag cleared failed.");
+            uart_debug_send("Update flag cleared failed.\r\n");
         }
+        f_close(&fsrc);  // 关闭文件
     }
+    
     return 0;
 }

@@ -80,7 +80,6 @@ int32_t FLASH_EraseSector(uint32_t u32Addr, uint32_t u32Size)
 {
     uint32_t i;
     uint32_t u32PageNum;
-
     if (u32Addr >= (FLASH_BASE + FLASH_SIZE)) {
         return LL_ERR_INVD_PARAM;
     }

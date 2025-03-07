@@ -6,6 +6,7 @@
 #include "mygpio.h"
 #include "iap.h"
 #include "iic.h"
+#include "uart_debug.h"
 
 /**
  * @brief  Main function of GPIO project
