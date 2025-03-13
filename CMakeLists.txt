@@ -12,7 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-set(CMAKE_PROJECT_NAME hc32f4a0-bootloader)
+set(CMAKE_PROJECT_NAME hc32f4a0-bootloader VERSION 1.0.0)
 
 set(MCU_TYPE "HC32F4A0xI" CACHE STRING "Set MCU Type")
 set(BOOTLOADER ON CACHE BOOL "Set to ON if bootloader is enabled")
