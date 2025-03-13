@@ -20,7 +20,8 @@ git submodule update --init --recursive
 ```  
 创建编译文件夹  
 ```bash
-mkdir build & cd build
+mkdir build 
+cd build
 ```   
 编译(liunux)  
 ```bash
