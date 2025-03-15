@@ -12,7 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-set(CMAKE_PROJECT_NAME hc32f4a0-bootloader VERSION 1.0.0)
+set(CMAKE_PROJECT_NAME hc32f4a0-bootloader)
 
 set(MCU_TYPE "HC32F4A0xI" CACHE STRING "Set MCU Type")
 set(BOOTLOADER ON CACHE BOOL "Set to ON if bootloader is enabled")
@@ -25,7 +25,7 @@ include("drivers/toolchain/gcc-arm-none-eabi.cmake")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME})
+project(${CMAKE_PROJECT_NAME} VERSION 1.0.0)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
