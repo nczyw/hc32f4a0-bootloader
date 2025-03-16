@@ -214,3 +214,7 @@ DRESULT SDCard_ioctl(BYTE cmd, void *buff)
 
     return res;
 }
+DWORD get_fattime (void)
+{
+	return 0;
+}
